@@ -27,6 +27,7 @@ pd.DataFrame(np.unique(np.argmax(y_train,1), return_counts = True))
 
 tf.test.is_gpu_available()
 
+##### Define hyper-parameters #####
 # Dropout parameters
 dropoutRate_0 = 0.2 #ref
 dropoutRate_1 = 0. #ref
@@ -65,6 +66,7 @@ k = 0.998#ref
 pi = 0.5#ref
 pf = 0.99#ref
 
+##### Create noisy observation ####
 def making_noise(x, prob):
   dim1, dim2 = x.shape
   corrupted_factor = np.concatenate([np.zeros([dim1, int(dim2*prob)]), np.ones([dim1, dim2- int(dim2*prob)])], axis = 1)
@@ -74,6 +76,8 @@ def making_noise(x, prob):
 x_train_noise = making_noise(x_train, destruction_proportion)
 x_PL_noise = making_noise(x_PL, destruction_proportion)
 x_test_noise = making_noise(x_test, destruction_proportion)
+
+##### Define NN architecture ####
 
 x = tf.placeholder("float", [None, inputN])
 y = tf.placeholder("float", [None, outputN])
@@ -164,7 +168,8 @@ costPL = tf.add(tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=pr
                 (alpha_t * tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=predPL1,
                                                                                 labels=PLy))))
 
-# Gradient Descent
+##### Define optimizer #####
+
 optimizerNN = tf.train.MomentumOptimizer(learning_rate = (1-p_t)*epsilon_t,
                                         momentum = -p_t/(1-p_t)).minimize(costNN)
 optimizerPL = tf.train.MomentumOptimizer(learning_rate = (1-p_t)*epsilon_t,
@@ -196,8 +201,9 @@ def DAE_preprocessing():
 
 sess = tf.InteractiveSession()
 sess.run(tf.global_variables_initializer())
-DAE_preprocessing()
 
+##### DAE #####
+DAE_preprocessing()
 x_pred = sess.run(predDAE, feed_dict = {DAE_x: x_train, DAE_x_noise: x_train_noise})
 f, a = plt.subplots(3, 10, figsize=(10, 3))
 plt.axis('off')
@@ -211,7 +217,8 @@ x_test = sess.run(predDAE, feed_dict = {DAE_x: x_test, DAE_x_noise: x_test_noise
 x_train = x_pred
 sess.close()
 
-# Launch the graph
+##### Define benchmark functions #####
+
 def accuracytestNN():
     # Test model
     correct_prediction = tf.equal(tf.argmax(predNN, 1), tf.argmax(y, 1))
@@ -229,7 +236,7 @@ def accuracytestPL():
     # To keep sizes compatible with model
     return accuracy.eval({x: x_test, y: mnist.test.labels})
 
-def dropNN_PL():
+def dropNN_PL_DAE():
   ### Neural Network parameters
   iteration_list = []
   neural_network_accuracy_list = []
@@ -311,4 +318,4 @@ def dropNN_PL():
     print("+PL+DAE:", accuracytestPL())
     plt.show()
 
-dropNN_PL()
+dropNN_PL_DAE()
