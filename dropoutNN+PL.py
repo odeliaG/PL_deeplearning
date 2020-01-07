@@ -19,43 +19,53 @@ for train_index, test_index in stratSplit.split(X = mnist.train.images,y = mnist
   x_PL = mnist.train.images[train_index]
 
 print('Labeled data size :', x_train.shape)
-print('Labeled data size :', x_PL.shape)
+print('Unlabeled data size :', x_PL.shape)
 print('Proportion of class label in train data: ')
 pd.DataFrame(np.unique(np.argmax(y_train,1), return_counts = True))
 
 tf.test.is_gpu_available()
 
-# Neural Network parameters
-iteration_list = []
-neural_network_accuracy_list = []
-pseudo_label_accuarcy_list = []
-neural_network_accuracy = 0
-pseudo_label_accuarcy = 0
+##### Define hyper-parameters #####
 
-learningRate = 1.5
-trainingEpochs = 3000
-dropoutRate_0 = 0.2
-dropoutRate_1 = 0.5
+# Dropout parameters
+dropoutRate_0 = 0.2 #ref
+dropoutRate_1 = 0.5 #ref
 
-inputN = 784
-hiddenN = 5000
-outputN = 10
+# NN parameters
+inputN = 784 #default
+hiddenN = 5000 #ref 
+outputN = 10 #default
 
-batchSize = 32
-PLbatchSize = 256
+# DAE_NN parameters
+DAE_hiddenN1 = 256 # ref
+DAE_hiddenN2 = 128
+DAE_hiddenN3 = 256
+destruction_proportion = 0.5 # ref
+trainingEpochsDAE = 50
+batch_sizeDAE = 256
 
-iteration = 0
-cPL = 0
+# iteraction parameters
+trainingEpochs = 3000 #ref
+batchSize = 32 # ref
+PLbatchSize = 256 #ref
 
-T1 = 100
-T2 = 600
-a = 0.
-af = 3.
+# balancing coefficient
+T1 = 100 #ref
+T2 = 600 #ref
+a = 0. #ref
+af = 3. #ref
 
-T = 500
-k = 0.998
-pi = 0.5
-pf = 0.99
+T1_DAE = 200 #ref
+T2_DAE = 800 #ref
+
+# SGD with dynamic momentum
+learningRate = 1.5 # ref
+T = 500 #ref
+k = 0.998 #ref
+pi = 0.5 #ref
+pf = 0.99 #ref
+
+##### Define NN architecture ####
 
 x = tf.placeholder("float", [None, inputN])
 y = tf.placeholder("float", [None, outputN])
@@ -110,7 +120,8 @@ costPL = tf.add(tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=pr
                 (alpha_t * tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=predPL1,
                                                                                 labels=PLy))))
 
-# Gradient Descent
+##### Define optimizer #####
+
 optimizerNN = tf.train.MomentumOptimizer(learning_rate = (1-p_t)*epsilon_t,
                                         momentum = -p_t/(1-p_t)).minimize(costNN)
 optimizerPL = tf.train.MomentumOptimizer(learning_rate = (1-p_t)*epsilon_t,
@@ -120,7 +131,8 @@ optimizerPL = tf.train.MomentumOptimizer(learning_rate = (1-p_t)*epsilon_t,
 init = tf.global_variables_initializer()
 
 
-# Launch the graph
+##### Define benchmark functions #####
+
 def accuracytestNN():
     # Test model
     correct_prediction = tf.equal(tf.argmax(predNN, 1), tf.argmax(y, 1))
