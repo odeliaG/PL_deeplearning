@@ -28,21 +28,13 @@ tf.test.is_gpu_available()
 ##### Define hyper-parameters #####
 
 # Dropout parameters
-dropoutRate_0 = 0.2 #ref
+dropoutRate_0 = 0. #ref
 dropoutRate_1 = 0.5 #ref
 
 # NN parameters
 inputN = 784 #default
 hiddenN = 5000 #ref 
 outputN = 10 #default
-
-# DAE_NN parameters
-DAE_hiddenN1 = 256 # ref
-DAE_hiddenN2 = 128
-DAE_hiddenN3 = 256
-destruction_proportion = 0.5 # ref
-trainingEpochsDAE = 50
-batch_sizeDAE = 256
 
 # iteraction parameters
 trainingEpochs = 3000 #ref
@@ -54,9 +46,6 @@ T1 = 100 #ref
 T2 = 600 #ref
 a = 0. #ref
 af = 3. #ref
-
-T1_DAE = 200 #ref
-T2_DAE = 800 #ref
 
 # SGD with dynamic momentum
 learningRate = 1.5 # ref
