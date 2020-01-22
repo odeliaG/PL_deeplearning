@@ -1,0 +1,25 @@
+Creation d'un reseau de neuronnes qui va générer des données (p_données)
+à partir de données d'apprentissage (p_data)
+Methode non supervisée
+
+Pk generer des données ? Pour augmenter les bases de learning
+(data augmentation)
+
+Une application possible: image colorization
+Une autre trop cool: génération de molécules (medoc adapté maladie)
+
+Deux grosses familles de res géné:
+ 	- Autoencoders (AE): 
+But : reconstruire les données d'entré. 
+Quel intért ? les coucj=hes cachées sont plus petites que 
+l'input donc le reseau est obligé de comprésser l'information.
+Pour ameliorer la robustesse du reseau on ajoute du bruit aux inputs
+(denoising autoencoder)
+On utilise ce réseau en pré-apprentissage: cad on apprend sur le
+denoising autoencoder puis on garde la pemiere couche sur laquelle on
+"greffe" un autre réseau et on recommence la manip pour toutes les couches.
+Ensuite on fait un apprentissage classique.
+On fait ça sur des données non supervisées.
+C'était trés utilisé avant car peu de donnés, un peu désuet today.
+Autre variante: variational autoencoder
+	- Les GAN

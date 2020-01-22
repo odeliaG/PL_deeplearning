@@ -1,0 +1,1254 @@
+{
+ "cells": [
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# TD 1 : Découverte des outils TF et Keras"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### Objective of the following tutorial : Create a MLP and a CNN on CIFAR-10 data"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "**Tensorflow** : one of the most famous framework\n",
+    " \n",
+    "**Keras** : high-API available for different frameworks\n"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "**Useful links** :\n",
+    "- overview of how to use Keras in Tensorflow : https://www.tensorflow.org/guide/keras/overview\n",
+    "- some tutorials can be found on the official website of Tensorflow on MNIST data, FashionMNIST (pay attention to the version of tensorflow used)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## 0. Launch a jupyter notebook"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "```bash\n",
+    "jupyter notebook\n",
+    "```"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "In order not to see the messages from jupyter notebook :"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "```bash\n",
+    "jupyter notebook --port 8890 < /dev/null &>/dev/null &\n",
+    "```"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "## 1. Build the model with Keras"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### a) Load the useful packages"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 1,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "from __future__ import print_function\n",
+    "\n",
+    "\n",
+    "import numpy as np # manipulate N-dimensional arrays\n",
+    "import pandas as pd # data frame\n",
+    "import matplotlib.pyplot as plt # data plotting\n",
+    "from sklearn import preprocessing # basic ML models\n",
+    "import scipy # scientific computing library\n",
+    "\n",
+    "# Note that an ecosytem exists SciPy https://www.scipy.org/ with all the above packages except scikit-learn\n",
+    "\n",
+    "import tensorflow as tf\n",
+    "import tensorflow.keras\n",
+    "from tensorflow.keras import backend as K\n",
+    "from tensorflow.keras.models import Model,Sequential\n",
+    "from tensorflow.keras.layers import Layer\n",
+    "from tensorflow.keras.utils import to_categorical, plot_model\n",
+    "from tensorflow.keras.layers import Input, Dense, BatchNormalization, Dropout, ReLU, Activation, Flatten,Conv2D, MaxPooling2D\n",
+    "from tensorflow.keras.optimizers import Adam, SGD, Nadam, RMSprop\n",
+    "from tensorflow.keras import regularizers\n",
+    "from tensorflow.keras.callbacks import ReduceLROnPlateau\n",
+    "from tensorflow.keras.backend import set_session,l2_normalize\n",
+    "from tensorflow.keras.backend import clear_session, set_session\n",
+    "from tensorflow.keras.datasets import cifar10\n",
+    "import gc\n",
+    "\n",
+    "import pickle\n",
+    "import seaborn"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Setting your GPU <*Regarder ce que disait le TUTO de Corée*>"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 2,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "'1.12.0'"
+      ]
+     },
+     "execution_count": 2,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "tf.__version__"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 3,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "True"
+      ]
+     },
+     "execution_count": 3,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "tf.test.is_gpu_available()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 4,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "'/device:GPU:0'"
+      ]
+     },
+     "execution_count": 4,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "tf.test.gpu_device_name()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 5,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "Using TensorFlow backend.\n"
+     ]
+    },
+    {
+     "data": {
+      "text/plain": [
+       "['/job:localhost/replica:0/task:0/device:GPU:0']"
+      ]
+     },
+     "execution_count": 5,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "from keras import backend as K\n",
+    "K.tensorflow_backend._get_available_gpus()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 6,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "[name: \"/device:CPU:0\"\n",
+       " device_type: \"CPU\"\n",
+       " memory_limit: 268435456\n",
+       " locality {\n",
+       " }\n",
+       " incarnation: 14935788589582082415, name: \"/device:XLA_CPU:0\"\n",
+       " device_type: \"XLA_CPU\"\n",
+       " memory_limit: 17179869184\n",
+       " locality {\n",
+       " }\n",
+       " incarnation: 13442125390245223375\n",
+       " physical_device_desc: \"device: XLA_CPU device\", name: \"/device:XLA_GPU:0\"\n",
+       " device_type: \"XLA_GPU\"\n",
+       " memory_limit: 17179869184\n",
+       " locality {\n",
+       " }\n",
+       " incarnation: 16679827449255460653\n",
+       " physical_device_desc: \"device: XLA_GPU device\", name: \"/device:GPU:0\"\n",
+       " device_type: \"GPU\"\n",
+       " memory_limit: 74121216\n",
+       " locality {\n",
+       "   bus_id: 1\n",
+       "   links {\n",
+       "   }\n",
+       " }\n",
+       " incarnation: 14487918948754254308\n",
+       " physical_device_desc: \"device: 0, name: GeForce RTX 2080 Ti, pci bus id: 0000:01:00.0, compute capability: 7.5\"]"
+      ]
+     },
+     "execution_count": 6,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "from tensorflow.python.client import device_lib\n",
+    "device_lib.list_local_devices()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 7,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import warnings\n",
+    "import os\n",
+    "warnings.filterwarnings(\"ignore\")\n",
+    "os.environ[\"CUDA_DEVICE_ORDER\"]=\"PCI_BUS_ID\"\n",
+    "os.environ[\"CUDA_VISIBLE_DEVICES\"]=\"0\"\n",
+    "os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' "
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "The command below enables to check if the model is training on the GPU:"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "```bash\n",
+    "watch -n1 nvidia-smi\n",
+    "```\n",
+    "-n means every second it is updated."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### b) Load the data"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "#### Description of the data : \n",
+    "There are  labeled subsets of the 80 million tiny images dataset and consists of 60000 **32x32** RGB images in 10 classes, with 6000 images per class. There are **50000 training images** and **10000 test images**. Source : https://www.cs.toronto.edu/~kriz/cifar.html"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "We can also download by the same way MNIST or Fashion-MNIST dataset. Please refer to the documentation : https://keras.io/datasets/."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "The data can be directly downloaded with Keras."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 8,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "x_train shape: (50000, 32, 32, 3)\n",
+      "50000 train samples\n",
+      "10000 test samples\n"
+     ]
+    }
+   ],
+   "source": [
+    "K.set_image_data_format('channels_last')\n",
+    "(x_train_original, y_train_original), (x_test, y_test) = cifar10.load_data()\n",
+    "print('x_train shape:', x_train_original.shape)\n",
+    "print(x_train_original.shape[0], 'train samples')\n",
+    "print(x_test.shape[0], 'test samples')\n"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 9,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "10"
+      ]
+     },
+     "execution_count": 9,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "num_classes = y_train_original.max() +1\n",
+    "num_classes"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 10,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "<matplotlib.image.AxesImage at 0x7f95f052c048>"
+      ]
+     },
+     "execution_count": 10,
+     "metadata": {},
+     "output_type": "execute_result"
+    },
+    {
+     "data": {
+      "image/png": "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\n",
+      "text/plain": [
+       "<Figure size 432x288 with 1 Axes>"
+      ]
+     },
+     "metadata": {},
+     "output_type": "display_data"
+    }
+   ],
+   "source": [
+    "plt.imshow(x_train_original[1])"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 11,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "array([[6],\n",
+       "       [9],\n",
+       "       [9],\n",
+       "       ...,\n",
+       "       [9],\n",
+       "       [1],\n",
+       "       [1]], dtype=uint8)"
+      ]
+     },
+     "execution_count": 11,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "y_train_original"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 12,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "LABELS = {\n",
+    "    0 : \"airplane\", \n",
+    "    1 : \"automobile\", \n",
+    "    2 : \"bird\", \n",
+    "    3 : \"cat\", \n",
+    "    4 : \"deer\",           \n",
+    "    5 : \"dog\", \n",
+    "    6 : \"frog\",\n",
+    "    7 : \"horse\", \n",
+    "    8 : \"ship\",\n",
+    "    9 : \"truck\"\n",
+    "}"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### c) Preprocess the data"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "- Data cleaning\n",
+    "- Data conversion\n",
+    "- Data normalization\n",
+    "- Data split"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "#### Data split"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Split: Train 40000, Val 10000, Test 10000."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 13,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "from sklearn.model_selection import train_test_split"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Parameters for data split:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 14,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "val_size = 0.2\n",
+    "r=42"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 15,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "x_train, x_val, y_train, y_val = train_test_split(x_train_original, y_train_original, test_size=1000, random_state=r, shuffle= True,stratify=y_train_original)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Check:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 16,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "(49000, 32, 32, 3)"
+      ]
+     },
+     "execution_count": 16,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "x_train.shape"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 17,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "(1000, 32, 32, 3)"
+      ]
+     },
+     "execution_count": 17,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "x_val.shape"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 18,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "(10000, 32, 32, 3)"
+      ]
+     },
+     "execution_count": 18,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "x_test.shape"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "#### Convert class vectors to binary class matrices."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 19,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "y_train_original = to_categorical(y_train_original, num_classes)\n",
+    "y_test = to_categorical(y_test, num_classes)\n",
+    "y_train = to_categorical(y_train, num_classes)\n",
+    "y_val = to_categorical(y_val, num_classes)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "#### Normalize the data"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Generally, the data should be normalized. The most used methods are MinMaxScaler and Standardizing (centrage-réduction). Source : https://towardsdatascience.com/scale-standardize-or-normalize-with-scikit-learn-6ccc7d176a02"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Here, the MinMax scaling is used : $\\frac{x-\\min(x)}{\\max(x)-\\min(x)}$  \n",
+    "The images are just divided by the maximun value of a pixel because the minimum is 0."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 20,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# The data must be converted into float in order to normalize them.\n",
+    "x_train_original = x_train_original.astype('float32')\n",
+    "x_test = x_test.astype('float32')\n",
+    "x_train = x_train.astype('float32')\n",
+    "x_val = x_val.astype('float32')\n",
+    "\n",
+    "x_train_original /= 255\n",
+    "x_test /= 255\n",
+    "x_train /= 255\n",
+    "x_val /= 255"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### d) Implement the model"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "**ToolBox:** \n",
+    "- Determine the **architecture** of your network: (there are also hyperparameters)\n",
+    "    - number of layers (depth);\n",
+    "    - number of neurons by layer (width);\n",
+    "    - type of layer (non-linearity);\n",
+    "    - links between the layers (batchnorm, dropout);\n",
+    "    /!\\ Some regularization methods have also some hyperparameters to adjust\n",
+    "- Determine the hyperparameters of the **training** :\n",
+    "    - the optimizer for the training and the learning rate;\n",
+    "    - size of the batch, number of epochs..."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "**The two models to implement:**"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "**Input**: CIFAR-10 data (32x32)  \n",
+    "\n",
+    "**Output**: one-hot vector with 10 classes  \n",
+    "\n",
+    "**Network**:\n",
+    "- MLP:\n",
+    "    - 1rst Hidden Layer (activation: ReLu, output size: 128)\n",
+    "    - 2nd Hidden Layer (activation: ReLu, output size: 64)\n",
+    "    - Output Layer (activation: Softmax, output size: class size)\n",
+    "- CNN:\n",
+    "    - Block #1: 2xConv (kernel size: 3x3, filters: 32, padding='same', activation: ReLu) > MaxPooling2D  (pool size: 2x2)\n",
+    "    - Block #2: 2xConv (kernel size: 3x3, filters: 64, padding='same', activation: ReLu) > MaxPooling2D  (pool size: 2x2)\n",
+    "    - Flatten\n",
+    "    - Hidden Layer (activation: ReLu, output size: 512) \n",
+    "    - Output Layer (activation: Softmax, output size: class size)  \n",
+    "    \n",
+    "**Training**: Adam, 0.001 learning rate (the default one), 64 batch size, 100 epochs for MLP, 25 epochs for CNN"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "**Two ways :** \n",
+    "- Sequence API : creation of the model instance beforhead and add the layers\n",
+    "- Functional API : the model is istancied after implementing each layer. The input on which every function is applied has to be specified. https://www.tensorflow.org/guide/keras/functional It's possible to have branches."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "First, it is important to clear the session to be sure that a model is not still loaded on the GPU."
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 34,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "clear_session()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "#### MLP (Sequence API)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 29,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "_________________________________________________________________\n",
+      "Layer (type)                 Output Shape              Param #   \n",
+      "=================================================================\n",
+      "flatten (Flatten)            (None, 3072)              0         \n",
+      "_________________________________________________________________\n",
+      "dense (Dense)                (None, 128)               393344    \n",
+      "_________________________________________________________________\n",
+      "batch_normalization (BatchNo (None, 128)               512       \n",
+      "_________________________________________________________________\n",
+      "re_lu (ReLU)                 (None, 128)               0         \n",
+      "_________________________________________________________________\n",
+      "dropout (Dropout)            (None, 128)               0         \n",
+      "_________________________________________________________________\n",
+      "dense_1 (Dense)              (None, 64)                8256      \n",
+      "_________________________________________________________________\n",
+      "batch_normalization_1 (Batch (None, 64)                256       \n",
+      "_________________________________________________________________\n",
+      "re_lu_1 (ReLU)               (None, 64)                0         \n",
+      "_________________________________________________________________\n",
+      "dropout_1 (Dropout)          (None, 64)                0         \n",
+      "_________________________________________________________________\n",
+      "dense_2 (Dense)              (None, 10)                650       \n",
+      "=================================================================\n",
+      "Total params: 403,018\n",
+      "Trainable params: 402,634\n",
+      "Non-trainable params: 384\n",
+      "_________________________________________________________________\n"
+     ]
+    }
+   ],
+   "source": [
+    "model_MLP = Sequential()\n",
+    "\n",
+    "model_MLP.add(Flatten(input_shape=(32, 32, 3)))\n",
+    "\n",
+    "model_MLP.add(Dense(128,input_shape=(64, 3072))) \n",
+    "model_MLP.add(BatchNormalization())\n",
+    "model_MLP.add(ReLU())\n",
+    "model_MLP.add(Dropout(0.25))\n",
+    "\n",
+    "model_MLP.add(Dense(64)) \n",
+    "model_MLP.add(BatchNormalization())\n",
+    "model_MLP.add(ReLU())\n",
+    "model_MLP.add(Dropout(0.25))\n",
+    "\n",
+    "model_MLP.add(Dense(10, activation='softmax'))\n",
+    "\n",
+    "model_MLP.compile(loss='categorical_crossentropy',\n",
+    "               optimizer='adam',\n",
+    "               metrics=['accuracy'])\n",
+    "\n",
+    "model_MLP.summary()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "#### CNN (Sequence API)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "<!-- Source : https://keras.io/examples/cifar10_cnn/-->"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 23,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "model_CNN = Sequential()\n",
+    "model_CNN.add(Conv2D(32, (3, 3), padding='same',\n",
+    "                 input_shape=x_train.shape[1:]))\n",
+    "model_CNN.add(Activation('relu'))\n",
+    "model_CNN.add(Conv2D(32, (3, 3)))\n",
+    "model_CNN.add(Activation('relu'))\n",
+    "model_CNN.add(MaxPooling2D(pool_size=(2, 2)))\n",
+    "model_CNN.add(Dropout(0.25))\n",
+    "\n",
+    "model_CNN.add(Conv2D(64, (3, 3), padding='same'))\n",
+    "model_CNN.add(Activation('relu'))\n",
+    "model_CNN.add(Conv2D(64, (3, 3)))\n",
+    "model_CNN.add(Activation('relu'))\n",
+    "model_CNN.add(MaxPooling2D(pool_size=(2, 2)))\n",
+    "model_CNN.add(Dropout(0.25))\n",
+    "\n",
+    "model_CNN.add(Flatten())\n",
+    "model_CNN.add(Dense(512))\n",
+    "model_CNN.add(Activation('relu'))\n",
+    "model_CNN.add(Dropout(0.5))\n",
+    "model_CNN.add(Dense(num_classes))\n",
+    "model_CNN.add(Activation('softmax'))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 24,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "_________________________________________________________________\n",
+      "Layer (type)                 Output Shape              Param #   \n",
+      "=================================================================\n",
+      "conv2d (Conv2D)              (None, 32, 32, 32)        896       \n",
+      "_________________________________________________________________\n",
+      "activation (Activation)      (None, 32, 32, 32)        0         \n",
+      "_________________________________________________________________\n",
+      "conv2d_1 (Conv2D)            (None, 30, 30, 32)        9248      \n",
+      "_________________________________________________________________\n",
+      "activation_1 (Activation)    (None, 30, 30, 32)        0         \n",
+      "_________________________________________________________________\n",
+      "max_pooling2d (MaxPooling2D) (None, 15, 15, 32)        0         \n",
+      "_________________________________________________________________\n",
+      "dropout_2 (Dropout)          (None, 15, 15, 32)        0         \n",
+      "_________________________________________________________________\n",
+      "conv2d_2 (Conv2D)            (None, 15, 15, 64)        18496     \n",
+      "_________________________________________________________________\n",
+      "activation_2 (Activation)    (None, 15, 15, 64)        0         \n",
+      "_________________________________________________________________\n",
+      "conv2d_3 (Conv2D)            (None, 13, 13, 64)        36928     \n",
+      "_________________________________________________________________\n",
+      "activation_3 (Activation)    (None, 13, 13, 64)        0         \n",
+      "_________________________________________________________________\n",
+      "max_pooling2d_1 (MaxPooling2 (None, 6, 6, 64)          0         \n",
+      "_________________________________________________________________\n",
+      "dropout_3 (Dropout)          (None, 6, 6, 64)          0         \n",
+      "_________________________________________________________________\n",
+      "flatten_1 (Flatten)          (None, 2304)              0         \n",
+      "_________________________________________________________________\n",
+      "dense_3 (Dense)              (None, 512)               1180160   \n",
+      "_________________________________________________________________\n",
+      "activation_4 (Activation)    (None, 512)               0         \n",
+      "_________________________________________________________________\n",
+      "dropout_4 (Dropout)          (None, 512)               0         \n",
+      "_________________________________________________________________\n",
+      "dense_4 (Dense)              (None, 10)                5130      \n",
+      "_________________________________________________________________\n",
+      "activation_5 (Activation)    (None, 10)                0         \n",
+      "=================================================================\n",
+      "Total params: 1,250,858\n",
+      "Trainable params: 1,250,858\n",
+      "Non-trainable params: 0\n",
+      "_________________________________________________________________\n"
+     ]
+    }
+   ],
+   "source": [
+    "model_CNN.summary()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### e) Training"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "#### i. Unit testing"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "##### Define the optimizer, the loss function and the metrics"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 31,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# opt = RMSprop(learning_rate=0.0001, decay=1e-6)\n",
+    "opt = Adam(lr=0.001)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 32,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "model_MLP.compile(loss='categorical_crossentropy',\n",
+    "              optimizer=opt,\n",
+    "              metrics=['accuracy'])"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 42,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "model_CNN.compile(loss='categorical_crossentropy',\n",
+    "              optimizer=opt,\n",
+    "              metrics=['accuracy'])"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "##### Train the model"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "%%time\n",
+    "batch_size = 64\n",
+    "epochs = 50\n",
+    "model_MLP.fit(x_train, y_train,\n",
+    "              batch_size=batch_size,\n",
+    "              epochs=epochs,\n",
+    "              validation_data=(x_val, y_val),\n",
+    "              shuffle=True)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "%%time\n",
+    "batch_size = 64\n",
+    "epochs = 25\n",
+    "model_CNN.fit(x_train, y_train,\n",
+    "              batch_size=batch_size,\n",
+    "              epochs=epochs,\n",
+    "              validation_data=(x_val, y_val),\n",
+    "              shuffle=True)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Tensorboard, a visualization toolkit, can be added to the callbacks parameter in fit() method."
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "How much time does the training take?  \n",
+    "If it's too long, the training set can be reduced and the number of epochs can be reduced. "
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "##### Save the model"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "save_dir = os.path.join('the_path_you_want', 'saved_models')\n",
+    "model_name = 'keras_cifar10_trained_model.cnn'"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "if not os.path.isdir(save_dir):\n",
+    "    os.makedirs(save_dir)\n",
+    "model_path = os.path.join(save_dir, model_name)\n",
+    "model.save(model_path)\n",
+    "print('Saved trained model at %s ' % model_path)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "Note that only the weights can be saved with the method save_weights()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import pickle\n",
+    "\n",
+    "with open(os.path.join(save_dir,\"histories_MLP.txt\"), \"wb\") as fp:     \n",
+    "    #Pickling\n",
+    "    pickle.dump(histories.history, fp)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "##### Analyse the results"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "histories.history.keys()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "plt.plot(histories.history['acc'], label='training set',marker='o', linestyle='solid',linewidth=1, markersize=6)\n",
+    "plt.plot(histories.history['val_acc'], label='validation set',marker='o', linestyle='solid',linewidth=1, markersize=6)\n",
+    "plt.title(\"Model accuracy\")\n",
+    "plt.xlabel('#Epochs')\n",
+    "plt.ylabel('Acuracy')\n",
+    "plt.legend(bbox_to_anchor=( 1., 1.))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "plt.plot(histories.history['loss'], label='training set',marker='o', linestyle='solid',linewidth=1, markersize=6)\n",
+    "plt.plot(histories.history['val_loss'], label='validation set',marker='o', linestyle='solid',linewidth=1, markersize=6)\n",
+    "plt.title(\"Model loss\")\n",
+    "plt.xlabel('#Epochs')\n",
+    "plt.ylabel('Total Loss')\n",
+    "plt.legend(bbox_to_anchor=( 1.35, 1.))"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "##### Evaluate the model on a test set"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# # Evaluate the model on the test data using `evaluate`\n",
+    "# print('\\n# Evaluate on test data')\n",
+    "# results = model.evaluate(x_test, y_test, batch_size=128)\n",
+    "# print('test loss, test acc:', results)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "##### Plot the results"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Sample test data\n",
+    "ix = np.random.randint(0, 10000, size=16)\n",
+    "ex_im = x_test[ix]\n",
+    "ex_lb = y_test[ix]\n",
+    "\n",
+    "# Predict\n",
+    "out = model_CNN.predict(ex_im)\n",
+    "classes = np.argmax(out, axis=1)  # softmax output -> class\n",
+    "\n",
+    "# Plot\n",
+    "fig, axes = plt.subplots(4, 4, figsize=(10, 10), sharey=True, sharex=True);\n",
+    "fig.suptitle(r'$\\rightarrow$ predicted (actual) $\\leftarrow$')\n",
+    "\n",
+    "k = 0\n",
+    "for i in range(4):\n",
+    "    for j in range(4):\n",
+    "        # Switch Axes\n",
+    "        ax = axes[i, j]\n",
+    "        \n",
+    "        # Show image\n",
+    "        ax.imshow(ex_im[k]);\n",
+    "        \n",
+    "        # Determine labels\n",
+    "        actual_lab = LABELS[np.argmax(ex_lb[k])]\n",
+    "        pred_lab = LABELS[classes[k]]\n",
+    "        \n",
+    "        # Format title\n",
+    "        title = \"{} ({})\".format(pred_lab, actual_lab)\n",
+    "        title_color = 'black'\n",
+    "        \n",
+    "        # Mark image if wrong prediction\n",
+    "        if actual_lab != pred_lab:\n",
+    "            ax.plot(np.array([0, 32]), np.array([0, 32]), 'r-')\n",
+    "            ax.plot(np.array([0, 32]), np.array([32, 0]), 'r-')\n",
+    "            title_color = 'red'\n",
+    "\n",
+    "        # Set title\n",
+    "        ax.set_title(title, color=title_color);\n",
+    "        \n",
+    "        # Set limits\n",
+    "        ax.set_xlim(32, 0)\n",
+    "        ax.set_ylim(32, 0)\n",
+    "            \n",
+    "        k += 1\n",
+    "\n",
+    "fig.savefig('figs/exemplary_images.png')"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "#### ii. Grid search on the validation set"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "- Architecture : number of layers, number of neurons by layer, type of non-linearity, weights initialization\n",
+    "- Optimizer, batch size, learning rate, number of epochs \n",
+    "- **regularizers** : L1/L2 ($\\alpha$), Dropout ($p$), BatchNorm, EarlyStopping, Data Augmentation  \n",
+    "(slide Bonne Pratique pour les hyperparamètres par défaut)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "##### Train a last time the entire training set and evaluate the model on the test set"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "##### Compare MLP and CNN"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "fig, axes = plt.subplots(2, 1, figsize=(5,4), dpi=100, sharex=True)\n",
+    "\n",
+    "x = np.arange(1, 1 + EPOCHS)\n",
+    "\n",
+    "ax = axes[0]\n",
+    "ax.set_ylabel('Cross-Entropy Loss')\n",
+    "ax.set_ylim(0.6, 2.2)\n",
+    "ax.set_yticks(np.arange(0.8, 2.05, 0.4))\n",
+    "ax.grid()\n",
+    "ax.plot(x, hist1.history['loss'], 'b-', label='MLP training')\n",
+    "ax.plot(x, hist1.history['val_loss'], 'b--', label='MLP validation')\n",
+    "ax.plot(x, hist2.history['loss'], 'r-', label='CNN training')\n",
+    "ax.plot(x, hist2.history['val_loss'], 'r--', label='CNN validation')\n",
+    "\n",
+    "ax = axes[1]\n",
+    "ax.set_xlabel('Epoch')\n",
+    "ax.set_xticks(np.array([0, 5, 10, 15, 20]));\n",
+    "ax.set_ylabel('Accuracy')\n",
+    "ax.set_ylim(0.2, 0.8)\n",
+    "ax.set_yticks(np.arange(0.3, 0.8, 0.2))\n",
+    "ax.grid()\n",
+    "ax.plot(x, hist1.history['acc'], 'b-', label='MLP training')\n",
+    "ax.plot(x, hist1.history['val_acc'], 'b--', label='MLP validation')\n",
+    "ax.plot(x, hist2.history['acc'], 'r-', label='CNN training')\n",
+    "ax.plot(x, hist2.history['val_acc'], 'r--', label='CNN validation')\n",
+    "\n",
+    "ax.legend(bbox_to_anchor=(0.5, -0.6), ncol=2, loc='center')\n",
+    "\n",
+    "fig.tight_layout()\n",
+    "fig.savefig('figs/training_vs_validation.png')"
+   ]
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "venv",
+   "language": "python",
+   "name": "venv"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.6.7"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 2
+}
